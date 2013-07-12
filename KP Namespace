@@ -1,0 +1,253 @@
+/*
+ 
+ kpsclmoc-0_0_3.js
+ 
+ Author: M Layman
+ Version: 0.0.3
+ 
+*/
+ 
+
+(function(kp, $, undefined) {
+
+    // SCLMOC namespace
+    var SCLMOC = (function() {
+
+        function SCLMOC() {
+
+            // Validator namespace
+            var Validator = (function() {
+
+                var 
+                _rulecache = [],
+                _testcache = {},
+                _handlercache = {
+                    always: function() { },
+                    done: function() { },
+                    fail: function() { }
+                };
+
+                function _registerHandler(name, handler) {
+                    if (_handlercache[name]) { _handlercache[name] = handler; }
+                }
+
+                function _execHandler(name, param) {
+                    (_handlercache[name]) ? _handlercache[name](param) : null;
+                }
+
+                function Validator() {
+                    // Detects ANY non-whitespace characters
+                    _testcache['required'] = '[^ \t\r\n\v\f]';
+                    // Test Passes on Numeric only or empty
+                    _testcache['numeric'] = '^([0-9]+?\\b)?$';
+                    // Test Passes on Date only or empty. Valid format m?m/d?d/yyyy
+                    _testcache['date'] = '^((([0]?[0-9])|[1][0-2])[/](([0]?[1-9])|([1-2][0-9])|([3][0-1]))[/]([1-9][0-9][0-9][0-9])\\b)?$';
+                }
+
+                Validator.prototype.clear = function() {
+                    for (var i = 0, len = _rulecache.length; i < len; i++) {
+                        // Clean out pointers to avoid memory leaks
+                        for (var name in _rulecache[i]) { _rulecache[i][name] = null; }
+                    }
+                    _rulecache = [];
+                };
+
+                /*
+                Stores rules for validation.
+                @param rule: 
+                {
+                // List of input ids that applies to the rule
+                controlIds: [string],
+                            
+                // Error message to be displayed
+                errMsg: string, (optional)
+                            
+                // Rule type
+                // -- 'numeric': Input is restricted to numeric formats
+                // -- 'required': A input of any type is required
+                // -- 'date': Input is restricted to date format (mm/dd/yyyy)
+                // -- 'custom': A custom test returning TRUE or FALSE (see customTest)
+                type: 'numeric'|'required'|'date'|'custom'
+                
+                // If a 'custom' rule type is selected, this setting must be provided.
+                // The custom test is a function that returns TRUE or FALSE. The parameter
+                // 'id' is an id supplied in the 'controlIds' list.
+                customTest: function(id) { return true|false; }
+                }
+                */
+                Validator.prototype.register = function(rule) {
+                    if (rule) { _rulecache.push(rule); }
+                    return this;
+                };
+
+                /*
+                Call this method to validate all rules that have been registered.
+                @param mode: 
+                {    
+                // If TRUE, the method will return TRUE 
+                // if all registered rules PASS, FALSE otherwise.
+                // If the mode is FALSE, the method will return the
+                // current (this) instance of the Validator namespace.
+                // If not explictly declared, default is FALSE.
+                aspMode: true|false  
+                }
+                */
+                Validator.prototype.validate = function(mode) {
+
+                    var _default = {
+                        errMsg: 'User input error.'
+                    };
+
+                    // Go through each rule in the cache and
+                    // apply the test from the cache or the
+                    // user supplied rule
+                    var rule = null;
+                    var errors = [];
+                    for (var i = 0, len = _rulecache.length; i < len; i++) {
+
+                        rule = _rulecache[i];
+
+                        for (var j = 0, ctrlcnt = (rule['controlIds']).length; j < ctrlcnt; j++) {
+
+                            // Find control associated with the id
+                            var ctrl = document.getElementById(rule['controlIds'][j]);
+                            if (!ctrl) {
+                                throw 'Validator Exception: ID ' + rule['controlIds'][j] + ' not found.';
+                            }
+
+                            // Trim surrounding whitespaces
+                            var val = ctrl.value.replace(/(^\s+|\s+$)/g, ''); ;
+
+                            if (rule['type']) {
+                                if (rule['type'] === 'custom') {
+                                    if (rule['customTest'](rule['controlIds'][j]) === false) {
+                                        // Capture error
+                                        errors.push({
+                                            id: rule['controlIds'][j],
+                                            type: rule['type'],
+                                            value: val,
+                                            errMsg: (KP.SCLMOC.isType(rule['errMsg'], '[object String]')) ? rule['errMsg'] : _default['errMsg']
+                                        });
+                                    }
+                                } else if (RegExp(_testcache[rule['type']]).test(val) === false) {
+                                    // Capture error
+                                    errors.push({
+                                        id: rule['controlIds'][j],
+                                        type: rule['type'],
+                                        value: val,
+                                        errMsg: (KP.SCLMOC.isType(rule['errMsg'], '[object String]')) ? rule['errMsg'] : _default['errMsg']
+                                    });
+                                }
+                            } else {
+                                throw 'Validator Exception: Rule type not defined.';
+                            }
+                            ctrl = null;
+                        }
+                        rule = null;
+                    }
+
+                    // Notify handlers
+                    _execHandler('always', null);
+
+                    // Error check
+                    if (errors.length > 0) {
+                        _execHandler('fail', errors);
+                        errors = []; errors = null;
+                        if (mode && mode['aspMode'] === true) { return false; }
+                    } else {
+                        _execHandler('done', null);
+                        errors = null;
+                        if (mode && mode['aspMode'] === true) { return true; }
+                    }
+
+                    return this;
+
+                }; // validate
+
+                Validator.prototype.debug = function() {
+                    console.log(_testcache);
+                    console.log(_rulecache);
+                    console.log(_handlercache);
+                    return this;
+                };
+
+                Validator.prototype.destroy = function() {
+                    this.clear();
+                    for (var name in _handlercache) { _handlercache[name] = null; }
+                    _rulecache = null;
+                    _testcache = null;
+                    _handlercache = null;
+                    _default = null;
+                };
+
+                Validator.prototype.always = function(handler) {
+                    _registerHandler('always', handler);
+                    return this;
+                };
+
+                Validator.prototype.done = function(handler) {
+                    _registerHandler('done', handler);
+                    return this;
+                };
+
+                Validator.prototype.fail = function(handler) {
+                    _registerHandler('fail', handler);
+                    return this;
+                };
+
+                return Validator;
+
+            })(); // Validator
+
+            // Json Namespace
+            var Json = (function() {
+
+                function Json() { }
+
+                /*  
+            
+                    Reference: http://stackoverflow.com/questions/1051061/convert-json-array-to-an-html-table-in-jquery
+                */
+                Json.prototype.buildTable = function(settings, jsondata) {
+                    var tbl_body_rows = '';
+                    $.each(jsondata, function(k, datarow) {
+                        var tbl_row = "";
+                        $.each(settings['columns'], function(k, v) {
+                            tbl_row += "<td>" + datarow[v] + "</td>";
+                        });
+                        tbl_body_rows += "<tr>" + tbl_row + "</tr>";
+                        datarow = null;
+                    });
+                    var tbl_body = '<tbody>' + tbl_body_rows + '</tbody>'
+                    if (settings['caption']) {
+                        tbl_body = '<caption>' + settings['caption'] + '</caption>' + tbl_body;
+                    }
+                    if (settings['className']) {
+                        return '<table class="' + settings['className'] + '">' + tbl_body + '</table>';
+                    } else {
+                        return '<table>' + tbl_body + '</table>';
+                    }
+                };
+
+                return Json;
+
+            })(); // Json
+
+            // Init SCLMOC
+            this.Validator = new Validator();
+            this.Json = new Json();
+
+        } // SCLMOC
+
+        // Compares object type to the typename
+        SCLMOC.prototype.isType = function(obj, typename) {
+            return Object.prototype.toString.apply(obj) === typename;
+        }
+
+        return SCLMOC;
+    })();
+
+    // SCLMOC namespace
+    kp.SCLMOC = new SCLMOC();
+
+} (window.KP = window.KP || {}, jQuery));
