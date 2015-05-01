@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>Wordy Tic-Tac-Toe</title>
+<link rel="stylesheet" type="text/css" href="css/tictactoe_1.0.css">
+<style type='text/css'>
+/* debug styling - can be removed */
+ul.menu-list {
+	margin:0; padding:0 10px;
+	position:absolute;
+	list-style:none;
+	background: #0e0e0e; /* Old browsers */
+}
+
+ul.menu-list li {
+	margin:0; padding:5px 15px;
+	display:inline-block	;
+	border-bottom:solid 5px transparent;
+	color:white;
+}
+ul.menu-list li:hover {
+	border-bottom:solid 5px white;
+	cursor:pointer;
+}
+</style>
+<script type='text/javascript' src='js/jquery-1.10.2.js'></script>
+<script type='text/javascript' src='js/jquery-ui-1.10.4.custom.js'></script>
+<script type='text/javascript'>
+// debug -> can be removed
+$(document).ready(function() {
+	$('#todo').hide();
+	$('#todo-hdr').click(function() {
+		$('#todo').toggle({
+			effect:"slide", 
+			direction: "up"
+		});
+	});
+	
+});
+
+$(document).ready(function() {
+	$('#menu ul.menu-list').hide();
+	$('#menu-hdr').click(function() {
+		$('#menu ul.menu-list').toggle({
+			effect:"slide", 
+			direction: "up",
+			visible:false
+		});
+	});
+	$('#menu').hover(
+		null,
+		function() {
+			$('#menu ul.menu-list').hide({
+				effect:"slide", 
+				direction: "up"
+			});
+		}
+	);
+});
+</script>
+</head>
+<body>
+<div>
+	<div id='container'>
+		<div id='menu' class='menu-bar'>
+			<div id='menu-hdr' class='header'>Menu</div>
+		</div>
+		<canvas id='board'>Does not support the canvas object.</canvas>
+	</div>
+</div>
+<div id='todo-hdr' style='background:#F92D2D;'>Todo:</div>
+<ul id='todo'>
+	<li>how to 'squeeze' divs into one line with overflow on width limit??</li>
+	<li>HOW TO PATTERN A TILE IN A TILESET???</li>
+	<li>word web service</li>
+	<li>centering</li>
+	<li>tablet check</li>
+	<li>word loading/editing interface</li>
+	<li>UI state notices</li>
+</ul>	
+</body>
+<script type='text/javascript' src='js/tictactoe.js'></script>
+</html>
